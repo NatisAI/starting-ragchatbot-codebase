@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Last Updated**: 2026-01-01 - Added Git workflow demonstration update.
+
 ## Codebase Overview
 
 This is a **Retrieval-Augmented Generation (RAG) System** for educational course materials. It's a full-stack web application that enables users to query course content and receive intelligent, context-aware responses.
