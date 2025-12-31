@@ -1,0 +1,160 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        USER QUERY PROCESS FLOW DIAGRAM                            ║
+║                         RAG Chatbot System Architecture                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                FRONTEND (User Interface)                          │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 1. User Input:                                                                 │
+│    - Types query in chat input                                                  │
+│    - Clicks send button or presses Enter                                       │
+│    - sendMessage() function triggered                                          │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 2. UI Updates:                                                                  │
+│    - Displays user message in chat                                              │
+│    - Shows loading indicator                                                   │
+│    - Disables input during processing                                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 3. API Request:                                                                 │
+│    POST /api/query                                                              │
+│    {                                                                           │
+│      "query": "user's question",                                             │
+│      "session_id": "current_session_id_or_null"                               │
+│    }                                                                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                BACKEND (FastAPI Server)                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 4. Request Handling:                                                            │
+│    - Validates request using Pydantic model                                     │
+│    - Creates session if none provided                                          │
+│    - Calls rag_system.query()                                                  │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                RAG SYSTEM (Core Logic)                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 5. Query Processing:                                                            │
+│    - Creates prompt with course context                                        │
+│    - Retrieves conversation history (if session exists)                        │
+│    - Calls ai_generator.generate_response()                                    │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                AI GENERATOR (Claude API)                         │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 6. Response Generation:                                                         │
+│    - Prepares system prompt with conversation context                           │
+│    - Sets up API parameters with available tools                               │
+│    - Calls Claude API: client.messages.create()                                │
+│    - If tool_use detected: executes search tools                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                SEARCH TOOLS (Content Retrieval)                  │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 7. Content Retrieval:                                                           │
+│    - CourseSearchTool.execute()                                                │
+│    - Uses vector_store.search() to find relevant content                       │
+│    - Formats results with course/lesson context                                 │
+│    - Stores sources for UI display                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                VECTOR STORE (ChromaDB)                          │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 8. Semantic Search:                                                             │
+│    - Uses Sentence Transformers embeddings                                    │
+│    - Performs vector similarity search                                         │
+│    - Applies filters (course name, lesson number)                              │
+│    - Returns relevant content chunks with metadata                             │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                RESPONSE GENERATION                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 9. Final Response:                                                              │
+│    - AI generates response based on search results                             │
+│    - Sources retrieved from tool manager                                       │
+│    - Conversation history updated                                              │
+│    - Returns QueryResponse with answer, sources, session_id                    │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                FRONTEND (Response Handling)                     │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 10. Response Processing:                                                        │
+│    - Receives JSON response                                                    │
+│    - Updates session ID if new                                                 │
+│    - Removes loading indicator                                                │
+│    - Displays AI response with sources                                         │
+│    - Re-enables input field                                                    │
+└───────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 11. UI Updates:                                                                 │
+│    - Shows assistant message with markdown formatting                           │
+│    - Displays sources in collapsible section                                    │
+│    - Scrolls chat to bottom                                                    │
+│    - Focuses on input field                                                    │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                    KEY COMPONENTS                                    ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ • Frontend: HTML/CSS/JS with chat interface                                    ║
+║ • Backend: FastAPI with RAG system                                             ║
+║ • Vector Store: ChromaDB with Sentence Transformers                            ║
+║ • AI Model: Anthropic Claude (Sonnet)                                          ║
+║ • Search Tools: CourseSearchTool with semantic matching                        ║
+║ • Session Management: Conversation context tracking                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                    FLOW SUMMARY                                      ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ 1. User Input → 2. UI Updates → 3. API Request → 4. Request Handling       ║
+║ → 5. Query Processing → 6. Response Generation → 7. Content Retrieval       ║
+║ → 8. Semantic Search → 9. Final Response → 10. Response Processing       ║
+║ → 11. UI Updates                                                               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
